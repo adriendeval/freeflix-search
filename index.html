@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recherche TMDB</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        .card, .modal-content {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+        .scrollable-item {
+            overflow-x: auto;
+            white-space: nowrap;
+            background-color: #333;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .scrollable-item code {
+            color: #bb86fc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Recherche de films et séries</h1>
+        <div class="form-group">
+            <input type="text" id="searchInput" class="form-control" placeholder="Rechercher sur TMDB...">
+        </div>
+        <button id="searchBtn" class="btn btn-primary btn-block">Rechercher</button>
+        
+        <div class="mt-4" id="results"></div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailModalLabel">Détails</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Informations détaillées seront affichées ici sous forme de liste -->
+                    <ul id="detailList" class="list-group"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "111c88a4bbb837b13e8e1491e3ac603a";
+
+        function createDetailItem(label, value) {
+            return `
+                <li class="list-group-item scrollable-item d-flex justify-content-between align-items-center">
+                    <span><strong>${label}</strong>: <code>${value}</code></span>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard('${value}')">Copier</button>
+                </li>
+            `;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Texte copié !");
+            }).catch(err => {
+                console.error("Erreur de copie", err);
+            });
+        }
+
+        $(document).ready(function () {
+            $('#searchBtn').click(function () {
+                let query = $('#searchInput').val();
+                if (query) {
+                    $.getJSON(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${query}&language=fr-FR`, function (data) {
+                        $('#results').empty();
+                        if (data.results.length > 0) {
+                            data.results.forEach(item => {
+                                let poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : "https://via.placeholder.com/200x300";
+                                $('#results').append(`
+                                    <div class="card mt-3">
+                                        <div class="row no-gutters">
+                                            <div class="col-md-4">
+                                                <img src="${poster}" class="card-img" alt="${item.title || item.name}">
+                                            </div>
+                                            <div class="col-md-8">
+                                                <div class="card-body">
+                                                    <h5 class="card-title">${item.title || item.name}</h5>
+                                                    <button class="btn btn-info" onclick="showDetails(${item.id}, '${item.media_type}')">Voir les détails</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                        } else {
+                            $('#results').html("<p>Aucun résultat trouvé.</p>");
+                        }
+                    });
+                }
+            });
+        });
+
+        function showDetails(id, type) {
+            $.getJSON(`https://api.themoviedb.org/3/${type}/${id}?api_key=${apiKey}&language=fr-FR`, function (data) {
+                $('#detailList').empty();
+                $('#detailList').append(createDetailItem("name", data.title || data.name));
+                $('#detailList').append(createDetailItem("original_name", data.original_title || data.original_name));
+                $('#detailList').append(createDetailItem("release_year", data.release_date ? data.release_date.split("-")[0] : ""));
+                $('#detailList').append(createDetailItem("type", type));
+                $('#detailList').append(createDetailItem("genre", data.genres.map(g => g.name).join(", ")));
+                $('#detailList').append(createDetailItem("director", data.created_by ? data.created_by.map(d => d.name).join(", ") : "N/A"));
+                $('#detailList').append(createDetailItem("cast", "À remplir via une autre requête si nécessaire"));
+                $('#detailList').append(createDetailItem("seasons", data.number_of_seasons || "N/A"));
+                $('#detailList').append(createDetailItem("episodes", data.number_of_episodes || "N/A"));
+                $('#detailList').append(createDetailItem("runtime", data.runtime || "N/A"));
+                $('#detailList').append(createDetailItem("rating", data.vote_average || "N/A"));
+                $('#detailList').append(createDetailItem("description", data.overview || "N/A"));
+                $('#detailList').append(createDetailItem("language", data.original_language));
+                $('#detailList').append(createDetailItem("country", data.production_countries.map(c => c.name).join(", ")));
+                $('#detailList').append(createDetailItem("production_company", data.production_companies.map(c => c.name).join(", ")));
+                $('#detailList').append(createDetailItem("release_date", data.release_date || "N/A"));
+                $('#detailList').append(createDetailItem("status", data.status || "N/A"));
+                $('#detailList').append(createDetailItem("poster_url", data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : "N/A"));
+                $('#detailList').append(createDetailItem("trailer_url", "À ajouter via une autre requête si nécessaire"));
+                $('#detailList').append(createDetailItem("tmdb_id", data.id));
+                $('#detailModal').modal('show');
+            });
+        }
+    </script>
+</body>
+</html>
