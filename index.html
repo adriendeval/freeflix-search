@@ -28,6 +28,26 @@
         .scrollable-item code {
             color: #bb86fc;
         }
+        .card-backdrop {
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6); /* Effet sombre pour lisibilité */
+        }
+        .card-content {
+            position: relative;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -87,19 +107,19 @@
                         $('#results').empty();
                         if (data.results.length > 0) {
                             data.results.forEach(item => {
-                                let poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : "https://via.placeholder.com/200x300";
+                                let backdrop = item.backdrop_path ? `https://image.tmdb.org/t/p/w780${item.backdrop_path}` : "https://via.placeholder.com/780x439";
+                                let releaseYear = item.release_date ? item.release_date.split("-")[0] : (item.first_air_date ? item.first_air_date.split("-")[0] : "N/A");
+                                let type = item.media_type === "movie" ? "Film" : "Série";
+                                let overview = item.overview ? item.overview : "Aucun synopsis disponible.";
+
                                 $('#results').append(`
-                                    <div class="card mt-3">
-                                        <div class="row no-gutters">
-                                            <div class="col-md-4">
-                                                <img src="${poster}" class="card-img" alt="${item.title || item.name}">
-                                            </div>
-                                            <div class="col-md-8">
-                                                <div class="card-body">
-                                                    <h5 class="card-title">${item.title || item.name}</h5>
-                                                    <button class="btn btn-info" onclick="showDetails(${item.id}, '${item.media_type}')">Voir les détails</button>
-                                                </div>
-                                            </div>
+                                    <div class="card mt-3 card-backdrop" style="background-image: url('${backdrop}')">
+                                        <div class="overlay"></div>
+                                        <div class="card-content">
+                                            <h5 class="card-title">${item.title || item.name} (${releaseYear})</h5>
+                                            <p class="card-text"><strong>Type:</strong> ${type}</p>
+                                            <p class="card-text"><strong>Synopsis:</strong> ${overview}</p>
+                                            <button class="btn btn-info" onclick="showDetails(${item.id}, '${item.media_type}')">Voir les détails</button>
                                         </div>
                                     </div>
                                 `);
@@ -115,17 +135,19 @@
         function showDetails(id, type) {
             $.getJSON(`https://api.themoviedb.org/3/${type}/${id}?api_key=${apiKey}&language=fr-FR`, function (data) {
                 $('#detailList').empty();
+                
+                let rating = data.vote_average ? (Math.round(data.vote_average * 10) / 10).toFixed(1) : "N/A";
+
                 $('#detailList').append(createDetailItem("name", data.title || data.name));
                 $('#detailList').append(createDetailItem("original_name", data.original_title || data.original_name));
-                $('#detailList').append(createDetailItem("release_year", data.release_date ? data.release_date.split("-")[0] : ""));
-                $('#detailList').append(createDetailItem("type", type));
+                $('#detailList').append(createDetailItem("release_year", data.release_date ? data.release_date.split("-")[0] : "N/A"));
+                $('#detailList').append(createDetailItem("type", type === "movie" ? "Film" : "Série"));
                 $('#detailList').append(createDetailItem("genre", data.genres.map(g => g.name).join(", ")));
                 $('#detailList').append(createDetailItem("director", data.created_by ? data.created_by.map(d => d.name).join(", ") : "N/A"));
-                $('#detailList').append(createDetailItem("cast", "À remplir via une autre requête si nécessaire"));
                 $('#detailList').append(createDetailItem("seasons", data.number_of_seasons || "N/A"));
                 $('#detailList').append(createDetailItem("episodes", data.number_of_episodes || "N/A"));
                 $('#detailList').append(createDetailItem("runtime", data.runtime || "N/A"));
-                $('#detailList').append(createDetailItem("rating", data.vote_average || "N/A"));
+                $('#detailList').append(createDetailItem("rating", rating));
                 $('#detailList').append(createDetailItem("description", data.overview || "N/A"));
                 $('#detailList').append(createDetailItem("language", data.original_language));
                 $('#detailList').append(createDetailItem("country", data.production_countries.map(c => c.name).join(", ")));
@@ -133,7 +155,6 @@
                 $('#detailList').append(createDetailItem("release_date", data.release_date || "N/A"));
                 $('#detailList').append(createDetailItem("status", data.status || "N/A"));
                 $('#detailList').append(createDetailItem("poster_url", data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : "N/A"));
-                $('#detailList').append(createDetailItem("trailer_url", "À ajouter via une autre requête si nécessaire"));
                 $('#detailList').append(createDetailItem("tmdb_id", data.id));
                 $('#detailModal').modal('show');
             });
