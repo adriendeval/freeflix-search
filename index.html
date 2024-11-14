@@ -48,6 +48,12 @@
             position: relative;
             padding: 20px;
         }
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body>
@@ -79,6 +85,15 @@
         </div>
     </div>
 
+    <!-- Toast container for copy confirmation -->
+    <div class="toast-container">
+        <div id="copyToast" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true" data-delay="2000">
+            <div class="toast-body">
+                Texte copié dans le presse-papier !
+            </div>
+        </div>
+    </div>
+
     <script>
         const apiKey = "111c88a4bbb837b13e8e1491e3ac603a";
 
@@ -93,13 +108,16 @@
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
-                alert("Texte copié !");
+                $('#copyToast').toast('show');
             }).catch(err => {
                 console.error("Erreur de copie", err);
             });
         }
 
         $(document).ready(function () {
+            // Initialize the toast
+            $('.toast').toast();
+
             $('#searchBtn').click(function () {
                 let query = $('#searchInput').val();
                 if (query) {
